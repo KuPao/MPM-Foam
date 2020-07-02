@@ -426,10 +426,10 @@ def particle_log(x, v, F):
     for i in range(3):
       f.write(str(F[p][i,0])+" "+str(F[p][i,1])+" "+str(F[p][i,2])+"\n")
 
-group_size = n_particles//2
+group_size = n_particles#//2
 @ti.kernel
 def initialize():
-  length = 0.2
+  length = 0.1
   for i in range(n_particles):
     x_start = ti.random() * length
     y_start = ti.random() * length
