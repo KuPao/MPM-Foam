@@ -28,7 +28,7 @@ new_grid_v = ti.Vector(dim, dt=ti.f32, shape=(n_grid, n_grid, n_grid))
 f = open('0.txt', 'w')
 """foam attribute"""
 """foam var"""
-gravity = -500
+gravity = -10
 kappa = 109.0
 mu = 11.2
 yield_stress = 0.1
@@ -201,7 +201,7 @@ def Update_Grid_V():
   for i, j, k in grid_m:
     if grid_m[i, j, k] > 0:  # No need for epsilon here
       new_grid_v[i, j, k] = grid_v[i, j, k]
-      new_grid_v[i, j, k] += dt * grid_f[i, j, k]/grid_m[i, j, k] * 1000
+      new_grid_v[i, j, k] += dt * grid_f[i, j, k]/grid_m[i, j, k]# * 1000
       new_grid_v[i, j, k][1] += dt * gravity
       # print(new_grid_v[i, j, k])
       
@@ -477,7 +477,7 @@ def copy_dynamic_nd(np_x: ti.ext_arr(), input_x: ti.template()):
 initialize()
 gui = ti.GUI("MPM-Foam", res=1024 * 0.8, background_color=0x000000)
 
-for frame in range(800):
+for frame in range(20000):
   f.close()
   f = open(f'{frame:06d}.txt', 'w')
   f.write("Frame " + str(frame)+'\n')
