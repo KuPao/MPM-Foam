@@ -195,6 +195,43 @@ def np_Grid_Force(x, v, F, grid_f):
             wip_g = np_wip_grad(index[0], index[1], index[2], x[p])
             grid_f[index[0], index[1], index[2]] = grid_f[index[0], index[1], index[2]] - Jp*vol[p]*stress.dot(wip_g)
 
+# @ti.kernel
+# def np_Grid_Force():
+#   grid_f = np.zeros((128, 128, 128, 3))
+
+#   for p in x:
+#     base = (x[p] * inv_dx - 0.5).astype(int)
+
+#     Jp = np.array(LA.det(F[p]), dtype = np.complex)
+#     b = F[p].dot(F[p].transpose())
+#     det_b = np.array(LA.det(b), dtype = np.complex)
+#     normalized_b = pow(det_b, -1/3) * b
+#     tr = normalized_b[0,0] + normalized_b[1,1] + normalized_b[2,2]
+#     dev = normalized_b - (tr/3)*np.identity(3)
+#     stress = np.zeros((3,3))
+#     if Jp != 0 and not np.isinf(Jp) and not np.isnan(Jp) and not np.isinf(tr) and not np.isnan(tr):
+#       stress = (1/Jp) * (kappa/2 * (Jp*Jp-1)*np.identity(3) + mu*dev)
+      
+#     if weak[p] == 1:  
+#       eigenvalue = np.ndarray((dim, dim), dtype=np.complex64)
+#       w, eigenvector = LA.eig(stress)
+#       for i in range(dim):
+#         if w[i] > 0:
+#           eigenvalue[i, i] = 0
+#         else:
+#           eigenvalue[i, i] = w[i]
+#       stress = eigenvector.dot(eigenvalue).dot(eigenvector.transpose())
+    
+#     for i in range(3): # Loop over 3x3 grid node neighborhood
+#       for j in range(3):
+#         for k in range(3):
+#           offset = np.array([i,j,k])
+#           index = base + offset
+#           weight = np_wip(index[0], index[1], index[2], x[p])
+#           if weight > 0:
+#             wip_g = np_wip_grad(index[0], index[1], index[2], x[p])
+#             grid_f[index[0], index[1], index[2]] = grid_f[index[0], index[1], index[2]] - Jp*vol[p]*stress.dot(wip_g)
+
 @ti.kernel
 def Update_Grid_V():
 
@@ -345,12 +382,15 @@ def np_Plastic_Flow(b_pre, F):
     
     det_F = np.array(LA.det(F[p]), dtype = np.complex)
     Cpp = np.identity(3)
-    inv_b = LA.inv(b)
+    det_b = LA.det(b)
+    inv_b = np.identity(3)
+    if det_b != 0:
+      inv_b = LA.inv(b)
     weight = pow(det_F, -2/3)
     a = F[p].transpose().dot(inv_b).dot(F[p])
 
     det_a = LA.det(a)
-    if not np.isinf(weight) and not np.isnan(weight) and not np.isinf(det_a) and not np.isnan(det_a):
+    if not np.isinf(weight) and not np.isnan(weight) and not np.isinf(det_a) and not np.isnan(det_a) and det_b != 0:
       Cpp = weight * a
     eigenvalue = np.ndarray((dim, dim), dtype=np.complex64)
     w, eigenvector = LA.eig(Cpp)
