@@ -1,3 +1,4 @@
 *.png
 *.txt
 foam copy.py
+foamcopy.py

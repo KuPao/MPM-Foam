@@ -6,7 +6,7 @@ write_to_disk = True
 ti.init(arch=ti.gpu) # Try to run on GPU. Use arch=ti.opengl on old GPUs
 dim = 3
 quality = 1 # Use a larger value for higher-res simulations
-n_particles, n_grid = 1500 * quality ** dim, 128 * quality
+n_particles, n_grid = 1728 * quality ** dim, 84 * quality
 dx, inv_dx = 1 / n_grid, float(n_grid)
 dt = 1e-4 / quality
 # p_vol, p_rho = ti.cast((dx * 0.5)**dim, ti.f32), ti.cast(1.4, ti.f32)
@@ -238,8 +238,8 @@ def Update_Grid_V():
   for i, j, k in grid_m:
     if grid_m[i, j, k] > 0:  # No need for epsilon here
       new_grid_v[i, j, k] = grid_v[i, j, k]
-      new_grid_v[i, j, k] += dt * grid_f[i, j, k]/grid_m[i, j, k]# * 1000
-      new_grid_v[i, j, k][1] += dt * gravity
+      new_grid_v[i, j, k] += dt * grid_f[i, j, k]/grid_m[i, j, k] * 50
+      new_grid_v[i, j, k][1] += dt * gravity * 50
       # print(new_grid_v[i, j, k])
       
   for i, j, k in grid_m:
@@ -410,8 +410,10 @@ def Particle_Position():
 def substep():
   print("P2G")
   P2G()
+  print("P2G done")
   print("Dectect_Tearing_Part")
   Dectect_Tearing_Part()
+  print("Dectect_Tearing_Part done")
 
   print("to_numpy")
   np_x = x.to_numpy()
@@ -420,6 +422,7 @@ def substep():
   np_grid_f = grid_f.to_numpy()
   print("np_Grid_Force")
   np_Grid_Force(np_x, np_v, np_F, np_grid_f)
+  print("np_Grid_Force done")
   print("from_numpy")
   x.from_numpy(np_x)
   v.from_numpy(np_v)
@@ -428,6 +431,7 @@ def substep():
 
   print("Update_Grid_V")
   Update_Grid_V()
+  print("Update_Grid_V done")
 
   print("to_numpy")
   np_x = x.to_numpy()
@@ -435,6 +439,7 @@ def substep():
   np_grid_v = grid_v.to_numpy()
   print("np_Update_Limit_Deformation_Gradient")
   np_Update_Limit_Deformation_Gradient(np_x, np_F, np_grid_v, b_pre)
+  print("np_Update_Limit_Deformation_Gradient done")
   print("from_numpy")
   x.from_numpy(np_x)
   F.from_numpy(np_F)
@@ -442,16 +447,19 @@ def substep():
 
   print("Update_Particle_V")
   Update_Particle_V()
+  print("Update_Particle_V done")
   
   print("to_numpy")
   np_F = F.to_numpy()
   print("np_Plastic_Flow")
   np_Plastic_Flow(b_pre, np_F)
+  print("np_Plastic_Flow done")
   print("from_numpy")
   F.from_numpy(np_F)
 
   print("Particle_Position")
   Particle_Position()
+  print("Particle_Position done")
 
 def particle_log(x, v, F):
   for p in range(n_particles):
@@ -470,37 +478,51 @@ group_size = n_particles#//2
 @ti.kernel
 def initialize():
   length = 0.1
-  for i in range(n_particles):
-    x_start = ti.random() * length
-    y_start = ti.random() * length
-    z_start = ti.random() * length
-    x_start -= length/2
-    y_start -= length/2
-    z_start -= length/2
-    while x_start*x_start + y_start*y_start + z_start*z_start > length**2:
-      x_start = ti.random() * length
-      y_start = ti.random() * length
-      z_start = ti.random() * length
-      x_start -= length/2
-      y_start -= length/2
-      z_start -= length/2
-    x_v = x_start + 0.3 + 0.3 * (i // group_size)
-    y_v = y_start + 0.6
-    z_v = z_start + 0.3 + 0.3 * (i // group_size)
-    # if i // group_size == 0 or i // group_size == 1:
-    #   x_v = x_start + 0.3
-    #   y_v = ti.random() * 0.8 + 0.001
-    pos = ti.Vector([x_v, y_v, z_v])
-    for d in ti.static(range(dim)):
-      x[i][d] = pos[d]
+  base = ti.Vector([0.3, 0.6, 0.3])
+  for i in range(12):
+    for j in range(12):
+      for k in range(12):
+        index = i * 12 * 12 + j * 12 + k
+        pos = base + 0.01 * ti.Vector([i, j, k])
+        for d in ti.static(range(dim)):
+          x[index][d] = pos[d]
+        v[index] = ti.Matrix.zero(ti.f32, dim)
+        F[index] = ti.Matrix.identity(ti.f32, dim)
+        Jp[index] = 1
+        p_m[index] = (dx * 0.5)**2
 
-    v[i] = ti.Matrix.zero(ti.f32, dim)
-    if i // group_size > 0:
-      v[i][0] = -100
+  
+  # for i in range(n_particles):
+  #   x_start = ti.random() * length
+  #   y_start = ti.random() * length
+  #   z_start = ti.random() * length
+  #   x_start -= length/2
+  #   y_start -= length/2
+  #   z_start -= length/2
+  #   while x_start*x_start + y_start*y_start + z_start*z_start > length**2:
+  #     x_start = ti.random() * length
+  #     y_start = ti.random() * length
+  #     z_start = ti.random() * length
+  #     x_start -= length/2
+  #     y_start -= length/2
+  #     z_start -= length/2
+  #   x_v = x_start + 0.3 + 0.3 * (i // group_size)
+  #   y_v = y_start + 0.6
+  #   z_v = z_start + 0.3 + 0.3 * (i // group_size)
+  #   # if i // group_size == 0 or i // group_size == 1:
+  #   #   x_v = x_start + 0.3
+  #   #   y_v = ti.random() * 0.8 + 0.001
+  #   pos = ti.Vector([x_v, y_v, z_v])
+  #   for d in ti.static(range(dim)):
+  #     x[i][d] = pos[d]
+
+  #   v[i] = ti.Matrix.zero(ti.f32, dim)
+  #   if i // group_size > 0:
+  #     v[i][0] = -100
     
-    F[i] = ti.Matrix.identity(ti.f32, dim)
-    Jp[i] = 1
-    p_m[i] = (dx * 0.5)**2
+  #   F[i] = ti.Matrix.identity(ti.f32, dim)
+  #   Jp[i] = 1
+  #   p_m[i] = (dx * 0.5)**2
 
 print("P2G")
 P2G()
