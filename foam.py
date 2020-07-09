@@ -238,8 +238,8 @@ def Update_Grid_V():
   for i, j, k in grid_m:
     if grid_m[i, j, k] > 0:  # No need for epsilon here
       new_grid_v[i, j, k] = grid_v[i, j, k]
-      new_grid_v[i, j, k] += dt * grid_f[i, j, k]/grid_m[i, j, k] * 50
-      new_grid_v[i, j, k][1] += dt * gravity * 50
+      new_grid_v[i, j, k] += dt * grid_f[i, j, k]/grid_m[i, j, k]
+      new_grid_v[i, j, k][1] += dt * gravity
       # print(new_grid_v[i, j, k])
       
   for i, j, k in grid_m:
@@ -411,9 +411,9 @@ def substep():
   print("P2G")
   P2G()
   print("P2G done")
-  print("Dectect_Tearing_Part")
-  Dectect_Tearing_Part()
-  print("Dectect_Tearing_Part done")
+  # print("Dectect_Tearing_Part")
+  # Dectect_Tearing_Part()
+  # print("Dectect_Tearing_Part done")
 
   print("to_numpy")
   np_x = x.to_numpy()
@@ -490,6 +490,7 @@ def initialize():
         F[index] = ti.Matrix.identity(ti.f32, dim)
         Jp[index] = 1
         p_m[index] = (dx * 0.5)**2
+        weak[index] = 0
 
   
   # for i in range(n_particles):
